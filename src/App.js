@@ -54,14 +54,16 @@ function findCurrentSubtitleText(subtitles, time, skipOffset) {
       return { text: subtitle.text, index: i };
     }
   }
-  return ""; // Return an empty string if no subtitle is found for the current time
+  return { text: "", index: skipOffset };
 }
 function App() {
-  const [video, setVideo] = useState(null);
   // { "url": "http://185.81.98.76/Click_2006_10bit_720p_x265_BrRip_30nama_30NAMA.mkv", "srt": "http://185.81.98.76/06. Click (2006).srt"}
+  const [video, setVideo] = useState(null);
   const [subtitle, setSubtitle] = useState([]);
   const [currentSubtitleText, setCurrentSubtitleText] = useState("");
   const [inputSrc, setInputSrc] = useState("");
+  const videoElem = useRef(null);
+  const skipSubOffsetIndex = useRef(null);
 
   useEffect(() => {
     const input = localStorage.getItem("inputSrc");
@@ -79,8 +81,6 @@ function App() {
     load();
   }, [video?.srt]);
 
-  const videoElem = useRef(null);
-  const skipSubOffsetIndex = useRef(null);
   useEffect(() => {
     if (!videoElem.current || !subtitle) return;
 
@@ -89,13 +89,13 @@ function App() {
       const currentTimeInMilliseconds = currentTimeInSeconds * 1000;
       const { text, index } = findCurrentSubtitleText(
         subtitle,
-        currentTimeInMilliseconds
+        currentTimeInMilliseconds,
+        skipSubOffsetIndex.current
       );
       setCurrentSubtitleText(text);
       skipSubOffsetIndex.current = index;
     }
     function seeked({ target }) {
-      console.log("seeked");
       skipSubOffsetIndex.current = 0;
     }
     videoElem.current.addEventListener("timeupdate", timeupdate);
@@ -145,12 +145,14 @@ function App() {
           Your browser does not support the video tag.
         </video>
       </div>
-      <div className="subtitle-wrapper">
-        <div
-          className="subtitle"
-          dangerouslySetInnerHTML={{ __html: currentSubtitleText }}
-        ></div>
-      </div>
+      {currentSubtitleText?.length > 0 && (
+        <div className="subtitle-wrapper">
+          <div
+            className="subtitle"
+            dangerouslySetInnerHTML={{ __html: currentSubtitleText }}
+          ></div>
+        </div>
+      )}
     </div>
   );
 }

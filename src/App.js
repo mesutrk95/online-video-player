@@ -60,6 +60,8 @@ function App() {
   // { "url": "http://185.81.98.76/Click_2006_10bit_720p_x265_BrRip_30nama_30NAMA.mkv", "srt": "http://185.81.98.76/06. Click (2006).srt"}
   const [video, setVideo] = useState(null);
   const [subtitle, setSubtitle] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [currentSubtitleText, setCurrentSubtitleText] = useState("");
   const [inputSrc, setInputSrc] = useState("");
   const videoElem = useRef(null);
@@ -100,12 +102,21 @@ function App() {
     function seeked({ target }) {
       skipSubOffsetIndex.current = 0;
     }
+    function loaded({ target }) {
+      setLoading(false);
+    }
+    function error({ target }) {
+      setError("error loading media.");
+    }
     videoElem.current.addEventListener("timeupdate", timeupdate);
     videoElem.current.addEventListener("seeked", seeked);
-
+    videoElem.current.addEventListener("loadeddata", loaded, false);
+    videoElem.current.addEventListener("error", error);
     return () => {
       videoElem.current.removeEventListener("timeupdate", timeupdate);
       videoElem.current.removeEventListener("seeked", seeked);
+      videoElem.current.removeEventListener("loadeddata", seeked);
+      videoElem.current.removeEventListener("error", seeked);
     };
   }, [videoElem.current, subtitle]);
 
@@ -117,6 +128,8 @@ function App() {
       url.searchParams.set("src", btoa(inputSrc));
 
       window.history.pushState(null, "", url);
+      setLoading(true);
+      setError(null);
     } catch (error) {
       window.alert(error.toString());
     }
@@ -141,6 +154,11 @@ function App() {
   return (
     <div className="App">
       <div className="video-container">
+        {(loading || error) && (
+          <div className="overlay">
+            <h4>{error || "Loading..."}</h4>
+          </div>
+        )}
         <video ref={videoElem} controls autoPlay>
           <source src={video.url} type="video/mp4" />
           Your browser does not support the video tag.

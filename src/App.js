@@ -66,9 +66,11 @@ function App() {
   const skipSubOffsetIndex = useRef(null);
 
   useEffect(() => {
-    const input = localStorage.getItem("inputSrc");
-    if (input) {
-      setInputSrc(input);
+    const href = new URL(window.location.href);
+    const src = href.searchParams.get("src");
+    if (src) {
+      const inputSrc = atob(src);
+      setInputSrc(inputSrc);
     }
   }, []);
 
@@ -109,7 +111,6 @@ function App() {
 
   const play = useCallback(() => {
     try {
-      localStorage.setItem("inputSrc", inputSrc);
       const inputs = JSON.parse(inputSrc);
       setVideo(inputs);
       const url = new URL(window.location.href);

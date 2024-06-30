@@ -45,22 +45,20 @@ function parseSrt(str) {
 
 async function getSubtitle(url) {
   const result = await (await fetch(url)).text();
-  //   var text= windows1256.encode(result);
-  // console.log(text);
   return parseSrt(result);
 }
-function findCurrentSubtitleText(subtitles, time) {
-  for (let i = 0; i < subtitles.length; i++) {
+function findCurrentSubtitleText(subtitles, time, skipOffset) {
+  for (let i = skipOffset || 0; i < subtitles.length; i++) {
     let subtitle = subtitles[i];
     if (time >= subtitle.startTime && time <= subtitle.endTime) {
-      return subtitle.text;
+      return { text: subtitle.text, index: i };
     }
   }
   return ""; // Return an empty string if no subtitle is found for the current time
 }
 function App() {
   const [video, setVideo] = useState(null);
-  // { "video": "http://185.81.98.76/Click_2006_10bit_720p_x265_BrRip_30nama_30NAMA.mkv", "srt": "http://185.81.98.76/06. Click (2006).srt"}
+  // { "url": "http://185.81.98.76/Click_2006_10bit_720p_x265_BrRip_30nama_30NAMA.mkv", "srt": "http://185.81.98.76/06. Click (2006).srt"}
   const [subtitle, setSubtitle] = useState([]);
   const [currentSubtitleText, setCurrentSubtitleText] = useState("");
   const [inputSrc, setInputSrc] = useState("");
@@ -82,18 +80,30 @@ function App() {
   }, [video?.srt]);
 
   const videoElem = useRef(null);
+  const skipSubOffsetIndex = useRef(null);
   useEffect(() => {
     if (!videoElem.current || !subtitle) return;
 
     function timeupdate({ target }) {
       const currentTimeInSeconds = target.currentTime;
       const currentTimeInMilliseconds = currentTimeInSeconds * 1000;
-      const text = findCurrentSubtitleText(subtitle, currentTimeInMilliseconds);
+      const { text, index } = findCurrentSubtitleText(
+        subtitle,
+        currentTimeInMilliseconds
+      );
       setCurrentSubtitleText(text);
+      skipSubOffsetIndex.current = index;
+    }
+    function seeked({ target }) {
+      console.log("seeked");
+      skipSubOffsetIndex.current = 0;
     }
     videoElem.current.addEventListener("timeupdate", timeupdate);
+    videoElem.current.addEventListener("seeked", seeked);
+
     return () => {
       videoElem.current.removeEventListener("timeupdate", timeupdate);
+      videoElem.current.removeEventListener("seeked", seeked);
     };
   }, [videoElem.current, subtitle]);
 
@@ -102,6 +112,10 @@ function App() {
       localStorage.setItem("inputSrc", inputSrc);
       const inputs = JSON.parse(inputSrc);
       setVideo(inputs);
+      const url = new URL(window.location.href);
+      url.searchParams.set("src", btoa(inputSrc));
+
+      window.history.pushState(null, "", url);
     } catch (error) {
       window.alert(error.toString());
     }
